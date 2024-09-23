@@ -8,7 +8,6 @@
 #include <sstream>
 #include <vector>
 
-// Функция для преобразования изображения в массив чисел
 std::vector<int> image_to_array(const std::string& img_path) {
     std::ifstream image_file(img_path, std::ios::binary);
     if (!image_file.is_open()) {
@@ -20,14 +19,12 @@ std::vector<int> image_to_array(const std::string& img_path) {
     return data;
 }
 
-// Функция для отправки массива чисел на сервер
 void send_to_server(int sockfd, const std::vector<int>& data) {
     size_t len = data.size();
     send(sockfd, &len, sizeof(int), 0);
     send(sockfd, &data[0], len * sizeof(int), 0);
 }
 
-// Функция для запуска Python-скрипта
 int run_python_script(const std::string& script_path) {
     std::stringstream command;
     command << "python3 " << script_path;
@@ -44,7 +41,7 @@ void write_to_file(const std::vector<int>& vec, const std::string& filename, siz
     out_file << width << std::endl;
     out_file << height << std::endl;
     for (const int& num : vec)
-        out_file << num << std::endl;  // Запись каждого числа на новой строке
+        out_file << num << std::endl;
 
     out_file.close();
 }
@@ -76,32 +73,26 @@ int main() {
 
     struct sockaddr_in server_addr{};
 
-    // Создать сокет
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
         perror("socket");
         return 1;
     }
 
-    // Настроить адрес
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // Адрес сервера
-    server_addr.sin_port = htons(8080); // Порт сервера
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(8080);
 
-    // Подключиться к серверу
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("connect");
         return 1;
     }
 
-    // Чтение изображения
     std::vector<int> img_arr = image_to_array(source_img);
     write_to_file(img_arr, source_img_arr, width, height);
 
-
     std::vector<int> img_arr_after_noise;
-    // Запустить Python-скрипт
     if (run_python_script(script_py) == -1) {
         perror("system");
         return 1;
@@ -109,15 +100,12 @@ int main() {
     else
         img_arr_after_noise = read_from_file(screw_img_arr);
 
-    // Отправить данные на сервер
     send_to_server(sockfd, img_arr_after_noise);
 
-    // Получить результат от сервера
-    recv(sockfd, &len, sizeof(int), 0); // Получить размер изображения
+    recv(sockfd, &len, sizeof(int), 0);
     std::vector<char> result_img_arr(len);
-    recv(sockfd, &result_img_arr[0], len, 0); // Получить изображение
+    recv(sockfd, &result_img_arr[0], len, 0);
 
-    // Сохранить полученное изображение
     std::ofstream result_file(received_img, std::ios::binary);
     if (!result_file.is_open()) {
         perror("ofstream");
