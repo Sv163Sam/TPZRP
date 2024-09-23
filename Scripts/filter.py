@@ -33,10 +33,13 @@ def median_filter(noise_img, mask):
 
 
 if __name__ == "__main__":
+    orig = cv2.imread("/Users/vladimirskobcov/Desktop/Labs/TPZRP/Img/SWEETIE_EYES.PNG", cv2.IMREAD_GRAYSCALE)
     with open("/Users/vladimirskobcov/Desktop/Labs/TPZRP/Txt/RECEIVED_EYES.txt", "r") as f:
         data = [int(x) for line in f for x in line.split()]
         size = (data[0], data[1])
         image = np.array(data[2:]).reshape(size)
         W = np.array([[1, 1, 1], [1, 1, 1], [1, 1, 1]], dtype='uint8')
-        image = median_filter(image, W)
-    cv2.imwrite("/Users/vladimirskobcov/Desktop/Labs/TPZRP/Img/RESTORED_EYES.PNG", image)
+        image1 = median_filter(image, W)
+        noise_coef = np.mean(np.power(image1 - orig, 2)) / np.mean(np.power(image - orig, 2))
+    cv2.imwrite("/Users/vladimirskobcov/Desktop/Labs/TPZRP/Img/RESTORED_EYES.PNG", image1)
+    print("Коэффиент медианного фильтра: ", noise_coef)
