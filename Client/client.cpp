@@ -9,33 +9,71 @@
 #include <vector>
 
 // Функция для преобразования изображения в массив чисел
-std::vector<int> imageToArray(const std::string& imagePath) {
-    std::ifstream imageFile(imagePath, std::ios::binary);
-    if (!imageFile.is_open()) {
-        perror("ifstream");
+std::vector<int> image_to_array(const std::string& img_path) {
+    std::ifstream image_file(img_path, std::ios::binary);
+    if (!image_file.is_open()) {
+        perror("stream");
         exit(1);
     }
-    std::string fileContent((std::istreambuf_iterator<char>(imageFile)), std::istreambuf_iterator<char>());
-    std::vector<int> data(fileContent.begin(), fileContent.end());
+    std::string file_content((std::istreambuf_iterator<char>(image_file)), std::istreambuf_iterator<char>());
+    std::vector<int> data(file_content.begin(), file_content.end());
     return data;
 }
 
 // Функция для отправки массива чисел на сервер
-void sendIntVector(int sockfd, const std::vector<int>& data) {
-    int len = data.size();
+void send_to_server(int sockfd, const std::vector<int>& data) {
+    size_t len = data.size();
     send(sockfd, &len, sizeof(int), 0);
     send(sockfd, &data[0], len * sizeof(int), 0);
 }
 
 // Функция для запуска Python-скрипта
-int runPythonScript(const std::string& scriptPath, const std::string& imagePath) {
+int run_python_script(const std::string& script_path) {
     std::stringstream command;
-    command << "python3 " << scriptPath << " " << imagePath;
+    command << "python3 " << script_path;
     return system(command.str().c_str());
+}
+
+void write_to_file(const std::vector<int>& vec, const std::string& filename, size_t width, size_t height) {
+    std::ofstream out_file(filename);
+    if (!out_file) {
+        std::cerr << "Ошибка открытия файла для записи" << std::endl;
+        return;
+    }
+
+    out_file << width << std::endl;
+    out_file << height << std::endl;
+    for (const int& num : vec)
+        out_file << num << std::endl;  // Запись каждого числа на новой строке
+
+    out_file.close();
+}
+
+std::vector<int> read_from_file(const std::string& filename) {
+    std::vector<int> vec;
+    std::ifstream inFile(filename);
+    if (!inFile) {
+        std::cerr << "Ошибка открытия файла для чтения" << std::endl;
+        return vec;
+    }
+
+    int num;
+    while (inFile >> num)
+        vec.push_back(num);
+
+    inFile.close();
+    return vec;
 }
 
 int main() {
     int sockfd;
+    int len = 0;
+    std::string source_img = "img/";
+    std::string source_img_arr = "txt/";
+    std::string screw_img_arr = "txt/";
+    std::string received_img = "img/";
+    std::string script_py = ".py";
+
     struct sockaddr_in server_addr{};
 
     // Создать сокет
@@ -58,31 +96,34 @@ int main() {
     }
 
     // Чтение изображения
-    std::string imagePath = "image.png"; // Путь к вашему изображению
-    std::vector<int> imageData = imageToArray(imagePath);
+    std::vector<int> img_arr = image_to_array(source_img);
+    write_to_file(img_arr, source_img_arr, width, height);
 
+
+    std::vector<int> img_arr_after_noise;
     // Запустить Python-скрипт
-    if (runPythonScript("client_script.py", imagePath) == -1) {
+    if (run_python_script(script_py) == -1) {
         perror("system");
         return 1;
     }
+    else
+        img_arr_after_noise = read_from_file(screw_img_arr);
 
     // Отправить данные на сервер
-    sendIntVector(sockfd, imageData);
+    send_to_server(sockfd, img_arr_after_noise);
 
     // Получить результат от сервера
-    int len;
     recv(sockfd, &len, sizeof(int), 0); // Получить размер изображения
-    std::vector<char> resultData(len);
-    recv(sockfd, &resultData[0], len, 0); // Получить изображение
+    std::vector<char> result_img_arr(len);
+    recv(sockfd, &result_img_arr[0], len, 0); // Получить изображение
 
     // Сохранить полученное изображение
-    std::ofstream resultFile("received_image.png", std::ios::binary);
-    if (!resultFile.is_open()) {
+    std::ofstream result_file(received_img, std::ios::binary);
+    if (!result_file.is_open()) {
         perror("ofstream");
         return 1;
     }
-    resultFile.write(&resultData[0], resultData.size());
+    result_file.write(&result_img_arr[0], (long)result_img_arr.size());
 
     close(sockfd);
     return 0;

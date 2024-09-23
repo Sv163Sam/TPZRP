@@ -10,7 +10,7 @@
 #include <sys/wait.h>
 
 // Функция для чтения массива чисел из сокета
-std::vector<int> readIntVector(int sockfd) {
+std::vector<int> read_vector(int sockfd) {
     std::vector<int> data;
     int len;
     recv(sockfd, &len, sizeof(int), 0); // Получить размер массива
@@ -22,20 +22,49 @@ std::vector<int> readIntVector(int sockfd) {
 }
 
 // Функция для запуска Python-скрипта
-int runPythonScript(const std::string& scriptPath, const std::vector<int>& data) {
+int run_python_script(const std::string& scriptPath) {
     std::stringstream command;
-    command << "python3 " << scriptPath << " ";
-    for (int num : data) {
-        command << num << " ";
+    command << "python3 " << scriptPath;
+    return system(command.str().c_str());
+}
+
+void write_to_file(const std::vector<int>& vec, const std::string& filename) {
+    std::ofstream outFile(filename);
+    if (!outFile) {
+        std::cerr << "Ошибка открытия файла для записи" << std::endl;
+        return;
     }
 
-    return system(command.str().c_str());
+    for (const int& num : vec)
+        outFile << num << std::endl;  // Запись каждого числа на новой строке
+
+    outFile.close();
+}
+
+std::vector<int> read_from_file(const std::string& filename) {
+    std::vector<int> vec;
+    std::ifstream inFile(filename);
+    if (!inFile) {
+        std::cerr << "Ошибка открытия файла для чтения" << std::endl;
+        return vec;
+    }
+
+    int num;
+    while (inFile >> num)
+        vec.push_back(num);
+
+    inFile.close();
+    return vec;
 }
 
 int main() {
     int sockfd, clientfd;
-    struct sockaddr_in server_addr, client_addr{};
+    struct sockaddr_in server_addr{}, client_addr{};
+    std::string received_img_arr = "txt/";
+    std::string restored_img = "img/";
+    std::string script_py = ".py";
     socklen_t client_addr_len;
+
 
     // Создать сокет
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -80,35 +109,38 @@ int main() {
             close(sockfd); // Закрыть сокет сервера в дочернем процессе
 
             // Получить данные
-            std::vector<int> data = readIntVector(clientfd);
+            std::vector<int> received_img = read_vector(clientfd);
+            write_to_file(received_img, received_img_arr);
 
             // Запустить Python-скрипт
-            if (runPythonScript("server_script.py", data) == -1) {
+            if (run_python_script(script_py) == -1) {
                 perror("system");
                 exit(1);
             }
 
-            // Отправить результат клиенту
-            // (В этом случае, я предполагаю, что server_script.py сгенерирует файл "result.png")
-            std::ifstream resultFile("result.png", std::ios::binary);
+            std::ifstream resultFile(restored_img, std::ios::binary);
             if (!resultFile.is_open()) {
                 perror("ifstream");
                 exit(1);
             }
             std::string fileContent((std::istreambuf_iterator<char>(resultFile)), std::istreambuf_iterator<char>());
-            int len = fileContent.length();
+            size_t len = fileContent.length();
             send(clientfd, &len, sizeof(int), 0);
             send(clientfd, fileContent.c_str(), len, 0);
 
             close(clientfd); // Закрыть сокет клиента
             exit(0); // Завершить дочерний процесс
-        } else if (pid > 0) {
+        }
+        else if (pid > 0)
+        {
             // Родительский процесс
             close(clientfd); // Закрыть сокет клиента в родительском процессе
             wait(nullptr); // Ожидать завершения дочернего процесса
-        } else {
+        }
+        else
+        {
             perror("fork");
-            continue;
+            break;
         }
     }
 
