@@ -8,6 +8,21 @@
 #include <sstream>
 #include <vector>
 
+bool is_png(const std::vector<int>& data) {
+    return data.size() >= 8 &&
+           data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G' &&
+           data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A;
+}
+
+void read_png_dimensions(const std::vector<int>& data, int& width, int& height)
+{
+    if (data.size() < 24)
+        throw std::runtime_error("Invalid PNG data");
+
+    width = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+    height = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+}
+
 std::vector<int> image_to_array(const std::string& img_path) {
     std::ifstream image_file(img_path, std::ios::binary);
     if (!image_file.is_open()) {
@@ -63,7 +78,7 @@ std::vector<int> read_from_file(const std::string& filename) {
 }
 
 int main() {
-    int sockfd;
+    int sockfd, width, height;
     int len = 0;
     std::string source_img = "img/";
     std::string source_img_arr = "txt/";
@@ -90,6 +105,21 @@ int main() {
     }
 
     std::vector<int> img_arr = image_to_array(source_img);
+
+    if (!is_png(img_arr)) {
+        std::cerr << "Ошибка: файл не является PNG!" << std::endl;
+        return -1;
+    }
+    try
+    {
+        read_png_dimensions(img_arr, width, height);
+    }
+    catch (const std::runtime_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return -1;
+    }
+
     write_to_file(img_arr, source_img_arr, width, height);
 
     std::vector<int> img_arr_after_noise;
