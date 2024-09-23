@@ -57,9 +57,9 @@ std::vector<int> read_from_file(const std::string& filename) {
 int main() {
     int sockfd, clientfd;
     struct sockaddr_in server_addr{}, client_addr{};
-    std::string received_img_arr = "txt/";
-    std::string restored_img = "img/";
-    std::string script_py = ".py";
+    std::string received_img_arr = "/Users/vladimirskobcov/Desktop/Labs/TPZRP/Txt/RECEIVED_EYES.txt";
+    std::string restored_img = "/Users/vladimirskobcov/Desktop/Labs/TPZRP/Img/RESTORED_EYES.PNG";
+    std::string script_py = "/Users/vladimirskobcov/Desktop/Labs/TPZRP/Scripts/filter.py";
     socklen_t client_addr_len;
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -111,6 +111,7 @@ int main() {
                 perror("ifstream");
                 exit(1);
             }
+
             std::string fileContent((std::istreambuf_iterator<char>(resultFile)), std::istreambuf_iterator<char>());
             size_t len = fileContent.length();
             send(clientfd, &len, sizeof(int), 0);
