@@ -1,0 +1,2 @@
+add_executable(Client_executable client.cpp)
+target_link_libraries(Client_executable ${CMAKE_CXX_STANDARD_LIBRARIES})
