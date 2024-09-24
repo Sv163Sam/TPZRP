@@ -54,13 +54,16 @@ int main() {
 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_addr.s_addr = inet_addr("192.168.56.1");
     server_addr.sin_port = htons(8080);
 
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("connect");
         return 1;
     }
+    else
+        std::cout << "Connect";
+
 
     std::vector<int> img_arr_after_noise;
     if (run_python_script(script_py) == -1) {
