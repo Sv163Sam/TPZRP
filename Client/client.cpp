@@ -37,7 +37,7 @@ std::vector<int> read_from_file(const std::string& filename) {
 }
 
 int main() {
-    int sockfd, width, height;
+    int sockfd;
     int len = 0;
     std::string source_img = "/Users/vladimirskobcov/Desktop/Labs/TPZRP/Img/SWEETIE_EYES.PNG";
     std::string screw_img_arr = "/Users/vladimirskobcov/Desktop/Labs/TPZRP/Txt/SCREW_EYES.txt";
